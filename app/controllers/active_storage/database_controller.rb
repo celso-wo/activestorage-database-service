@@ -7,7 +7,6 @@ class ActiveStorage::DatabaseController < ActiveStorage::BaseController
 
   def show
     if key = decode_verified_key
-      puts key
       # filename = key[:disposition].match(/filename=(\"?)(.+)\1/)[2]
       # Filename and content length can be determined w/o retrieving blob record given that the entire file will be
       # read into memory (via database_service.download).  Anticipating future feature of streaming.
