@@ -13,13 +13,17 @@ module ActiveStorage
       end
     end
 
-    def download(key)
-      instrument :download, key: key do
-        record = ::ActiveStorageDatum.find_by_key(key)
-        if record
+    def download(key, &block)
+      record = ::ActiveStorageDatum.find_by_key(key)
+      raise ActiveStorage::FileNotFoundError unless record
+
+      if block_given?
+        instrument :streaming_download, key: key do
+          stream(record.io, &block)
+        end
+      else
+        instrument :download, key: key do
           return record.io
-        else
-          raise ActiveStorage::FileNotFoundError
         end
       end
     end
@@ -99,6 +103,16 @@ module ActiveStorage
     end
 
     private
+
+    def stream(object)
+      chunk_size = 5.megabytes
+      offset = 0
+
+      while offset < object.size
+        yield object[offset, offset + chunk_size]
+        offset += chunk_size
+      end
+    end
 
     def url_helpers
       @url_helpers ||= Rails.application.routes.url_helpers

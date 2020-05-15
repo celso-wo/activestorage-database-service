@@ -7,12 +7,13 @@ class ActiveStorage::DatabaseController < ActiveStorage::BaseController
 
   def show
     if key = decode_verified_key
+      puts key
       # filename = key[:disposition].match(/filename=(\"?)(.+)\1/)[2]
       # Filename and content length can be determined w/o retrieving blob record given that the entire file will be
       # read into memory (via database_service.download).  Anticipating future feature of streaming.
-      blob = ActiveStorage::Blob.find_by!(key: key[:key])
+      blob = ActiveStorage::Blob.find_by(key: get_blob_key(key[:key]))
 
-      serve_file key[:key], last_modified: key[:created_at], content_length: blob.byte_size,
+      serve_file key[:key], last_modified: key[:created_at], content_length: nil,
                  content_type: key[:content_type], disposition: key[:disposition]
     else
       head :not_found
@@ -33,6 +34,10 @@ class ActiveStorage::DatabaseController < ActiveStorage::BaseController
   end
 
   private
+  def get_blob_key(key)
+    key.scan(/variants\/(.+)\//)&.first&.last || key
+  end
+
   def database_service
     ActiveStorage::Blob.service
   end
@@ -49,7 +54,6 @@ class ActiveStorage::DatabaseController < ActiveStorage::BaseController
 
     send_data database_service.download(key)
   end
-
 
   def decode_verified_token
     ActiveStorage.verifier.verified(params[:encoded_token], purpose: :blob_token)
